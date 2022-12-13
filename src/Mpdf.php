@@ -13720,7 +13720,7 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 					$this->Reset();
 					$this->pageoutput[$this->page] = [];
 				}
-				$this->y = (($this->blk[$this->blklvl]['float_endpos'] * 1000) % 1000000) / 1000; // mod changes operands to integers before processing
+                $this->y = (round($this->blk[$this->blklvl]['float_endpos'] * 1000) % 1000000) / 1000; // mod changes operands to integers before processing
 			}
 			/* -- END CSS-FLOAT -- */
 
