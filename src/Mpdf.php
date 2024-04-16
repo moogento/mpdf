@@ -1551,7 +1551,7 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 	 *
 	 * @return \Mpdf\Mpdf
 	 */
-	public function setLogger(LoggerInterface $logger)
+	public function setLogger(LoggerInterface $logger):void
 	{
 		$this->logger = $logger;
 
@@ -1561,7 +1561,6 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 			}
 		}
 
-		return $this;
 	}
 
 	private function initConfig(array $config)
@@ -8961,7 +8960,7 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 		$c = explode(",", $c[1], 2);
 		foreach ($c as $v) {
 			$v = explode("=", $v, 2);
-			$sp[$v[0]] = $v[1];
+			$sp[$v[0]] = trim($v[1], "\xbb\xa4\xac");
 		}
 		return (unserialize($sp['objattr']));
 	}
