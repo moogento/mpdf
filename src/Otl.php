@@ -6135,7 +6135,7 @@ class Otl
 		if ($available == '') {
 			return '';
 		}
-		$tags = preg_split('/-/', $ietf);
+		$tags = preg_split('/-/', (string)$ietf);
 		$lang = '';
 		$country = '';
 		$script = '';
