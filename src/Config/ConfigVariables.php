@@ -452,8 +452,9 @@ class ConfigVariables
 			'fontDir' => [
 				__DIR__ . '/../../ttfonts'
 			],
-
-			'tempDir' => __DIR__ . '/../../tmp',
+			// write tmp files to Magento Root Var folder
+			'tempDir' => \Magento\Framework\App\ObjectManager::getInstance()->get(\Magento\Framework\Filesystem::class)
+				->getDirectoryRead(\Magento\Framework\App\Filesystem\DirectoryList::VAR_DIR)->getAbsolutePath('moogento/tmp'),
 
 			'allowAnnotationFiles' => false,
 
