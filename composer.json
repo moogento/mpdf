@@ -32,7 +32,7 @@
 		"php": "~7.2.0 || ~7.3.0 || ~7.4.0 || ~8.0 || ~8.1 || ~8.2 || ~8.3",
 		"ext-gd": "*",
 		"ext-mbstring": "*",
-		"psr/log": "^2 || ^3",
+		"psr/log": "^1 || ^2 || ^3",
 		"setasign/fpdi": "^2.1",
 		"paragonie/random_compat": "^1.4|^2.0|^9.99",
 		"myclabs/deep-copy": "^1.7"
