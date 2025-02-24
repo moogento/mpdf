@@ -13,6 +13,18 @@ class Tr extends Tag
 		$this->mpdf->lastoptionaltag = 'TR'; // Save current HTML specified optional endtag
 		$this->cssManager->tbCSSlvl++;
 		$this->mpdf->row++;
+		if (!isset($this->mpdf->table[$this->mpdf->tableLevel])) {
+		    $this->mpdf->table[$this->mpdf->tableLevel] = [];
+		}
+		if (!isset($this->mpdf->tbctr[$this->mpdf->tableLevel])) {
+		    $this->mpdf->tbctr[$this->mpdf->tableLevel] = 1;
+		}
+		if (!isset($this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]])){
+			$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]] = [];
+		}
+		if (!isset($this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['nr'])){
+			$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['nr'] = 0;
+		}
 		$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['nr'] ++;
 		$this->mpdf->col = -1;
 		$properties = $this->cssManager->MergeCSS('TABLE', 'TR', $attr);
@@ -45,12 +57,12 @@ class Tr extends Tag
 		}
 
 		// FIXME: undefined variable $currblk
-		if (!empty($properties['BACKGROUND-IMAGE']) && !$this->mpdf->kwt && !$this->mpdf->ColActive) {
+		/*if (!empty($properties['BACKGROUND-IMAGE']) && !$this->mpdf->kwt && !$this->mpdf->ColActive) {
 			$ret = $this->mpdf->SetBackground($properties, $currblk['inner_width']);
 			if ($ret) {
 				$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['trbackground-images'][$this->mpdf->row] = $ret;
 			}
-		}
+		}*/
 		/* -- END BACKGROUNDS -- */
 
 		if (isset($properties['TEXT-ROTATE'])) {

@@ -407,7 +407,9 @@ class Input extends Tag
 		// Output it to buffers
 		if ($this->mpdf->tableLevel) {
 			$this->mpdf->_saveCellTextBuffer($e, $this->mpdf->HREF);
-			$this->mpdf->cell[$this->mpdf->row][$this->mpdf->col]['s'] += $objattr['width'];
+			if(isset($this->mpdf->cell[$this->mpdf->row][$this->mpdf->col]['s'])){
+			    $this->mpdf->cell[$this->mpdf->row][$this->mpdf->col]['s'] += $objattr['width'];
+			}
 		} else {
 			/* -- END TABLES -- */
 			$this->mpdf->_saveTextBuffer($e, $this->mpdf->HREF);
