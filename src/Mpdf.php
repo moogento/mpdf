@@ -13447,7 +13447,7 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 								}
 							}
 							$this->_saveCellTextBuffer($e, $this->HREF);
-							if (substr($this->cell[$this->row][$this->col]['a'], 0, 1) == 'D') {
+							if (isset($this->cell[$this->row][$this->col]['a']) && substr($this->cell[$this->row][$this->col]['a'], 0, 1) == 'D') {
 								$dp = $this->decimal_align[substr($this->cell[$this->row][$this->col]['a'], 0, 2)];
 								$s = preg_split('/' . preg_quote($dp, '/') . '/', $e, 2);  // ? needs to be /u if not core
 								$s0 = $this->GetStringWidth($s[0], false);
@@ -19393,6 +19393,9 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 	// cells		List of cells of each rows, cells[i][j] is a cell in the table
 	function _tableColumnWidth(&$table, $firstpass = false)
 	{
+		if (!isset($table['nc']) || !isset($table['nr'])) {
+			return [0, 0];
+		}
 		$cs = &$table['cells'];
 
 		$nc = $table['nc'];
@@ -19415,10 +19418,14 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 					$c = &$cs[$i][$j];
 
 					if ($this->simpleTables) {
-						if ($table['borders_separate']) { // NB twice border width
-							$extrcw = $table['simple']['border_details']['L']['w'] + $table['simple']['border_details']['R']['w'] + $c['padding']['L'] + $c['padding']['R'] + $table['border_spacing_H'];
+						if (isset($table['simple'])) {
+							if ($table['borders_separate']) { // NB twice border width
+								$extrcw = $table['simple']['border_details']['L']['w'] + $table['simple']['border_details']['R']['w'] + $c['padding']['L'] + $c['padding']['R'] + $table['border_spacing_H'];
+							} else {
+								$extrcw = $table['simple']['border_details']['L']['w'] / 2 + $table['simple']['border_details']['R']['w'] / 2 + $c['padding']['L'] + $c['padding']['R'];
+							}
 						} else {
-							$extrcw = $table['simple']['border_details']['L']['w'] / 2 + $table['simple']['border_details']['R']['w'] / 2 + $c['padding']['L'] + $c['padding']['R'];
+							$extrcw = $c['padding']['L'] + $c['padding']['R'];
 						}
 					} else {
 						if ($this->packTableData) {
@@ -19864,16 +19871,26 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 	function _tableWidth(&$table)
 	{
 		$widthcols = &$table['wc'];
-		$numcols = $table['nc'];
+		$numcols = &$table['nc'];
 		$tablewidth = 0;
-
-		if ($table['borders_separate']) {
-			$tblbw = $table['border_details']['L']['w'] + $table['border_details']['R']['w'] + $table['margin']['L'] + $table['margin']['R'] + $table['padding']['L'] + $table['padding']['R'] + $table['border_spacing_H'];
+		$table['margin'] = isset($table['margin']) ? $table['margin'] : ['L' => 0, 'R' => 0];
+		if (isset($table['borders_separate']) && $table['borders_separate']) {
+			$tblbw = (isset($table['border_details']['L']['w']) ? $table['border_details']['L']['w'] : 0) + 
+			         (isset($table['border_details']['R']['w']) ? $table['border_details']['R']['w'] : 0) + 
+			         (isset($table['margin']['L']) ? $table['margin']['L'] : 0) + 
+			         (isset($table['margin']['R']) ? $table['margin']['R'] : 0) + 
+			         (isset($table['padding']['L']) ? $table['padding']['L'] : 0) + 
+			         (isset($table['padding']['R']) ? $table['padding']['R'] : 0) + 
+			         (isset($table['border_spacing_H']) ? $table['border_spacing_H'] : 0);
 		} else {
-			$tblbw = $table['max_cell_border_width']['L'] / 2 + $table['max_cell_border_width']['R'] / 2 + $table['margin']['L'] + $table['margin']['R'];
+			$leftBorderWidth = isset($table['max_cell_border_width']['L']) ? $table['max_cell_border_width']['L'] : 0;
+			$rightBorderWidth = isset($table['max_cell_border_width']['R']) ? $table['max_cell_border_width']['R'] : 0;
+			$tblbw = $leftBorderWidth / 2 + $rightBorderWidth / 2 + 
+			         (isset($table['margin']['L']) ? $table['margin']['L'] : 0) + 
+			         (isset($table['margin']['R']) ? $table['margin']['R'] : 0);
 		}
 
-		if ($table['level'] > 1 && isset($table['w'])) {
+		if (isset($table['level']) && $table['level'] > 1 && isset($table['w'])) {
 
 			if (isset($table['wpercent']) && $table['wpercent']) {
 				$table['w'] = $temppgwidth = (($table['w'] - $tblbw) * $table['wpercent'] / 100) + $tblbw;
@@ -19885,8 +19902,8 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 
 			$temppgwidth = $this->tbrot_maxw;
 
-			// If it is less than 1/20th of the remaining page height to finish the DIV (i.e. DIV padding + table bottom margin) then allow for this
-			$enddiv = $this->blk[$this->blklvl]['padding_bottom'] + $this->blk[$this->blklvl]['border_bottom']['w'];
+			$enddiv = (isset($this->blk[$this->blklvl]['padding_bottom']) ? $this->blk[$this->blklvl]['padding_bottom'] : 0) + 
+			          (isset($this->blk[$this->blklvl]['border_bottom']['w']) ? $this->blk[$this->blklvl]['border_bottom']['w'] : 0);
 
 			if ($enddiv / $temppgwidth < 0.05) {
 				$temppgwidth -= $enddiv;
@@ -19894,16 +19911,15 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 
 		} else {
 
-			if (isset($table['w']) && $table['w'] < $this->blk[$this->blklvl]['inner_width']) {
+			if (isset($table['w']) && $table['w'] < (isset($this->blk[$this->blklvl]['inner_width']) ? $this->blk[$this->blklvl]['inner_width'] : 0)) {
 				$notfullwidth = 1;
 				$temppgwidth = $table['w'];
-			} elseif ($table['overflow'] == 'visible' && $table['level'] == 1) {
+			} elseif (isset($table['overflow']) && $table['overflow'] == 'visible' && isset($table['level']) && $table['level'] == 1) {
 				$temppgwidth = null;
-			} elseif ($table['overflow'] == 'hidden' && !$this->ColActive && isset($table['w']) && $table['w'] > $this->blk[$this->blklvl]['inner_width'] && $table['w'] == $table) {
-				// $temppgwidth = $this->blk[$this->blklvl]['inner_width'];
+			} elseif (isset($table['overflow']) && $table['overflow'] == 'hidden' && !$this->ColActive && isset($table['w']) && $table['w'] > (isset($this->blk[$this->blklvl]['inner_width']) ? $this->blk[$this->blklvl]['inner_width'] : 0) && $table['w'] == $table) {
 				$temppgwidth = $table['w'];
 			} else {
-				$temppgwidth = $this->blk[$this->blklvl]['inner_width'];
+				$temppgwidth = isset($this->blk[$this->blklvl]['inner_width']) ? $this->blk[$this->blklvl]['inner_width'] : 0;
 			}
 
 		}
@@ -20106,7 +20122,7 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 			}
 		}
 
-		if ($table['overflow'] === 'visible' && $table['level'] == 1) {
+		if (isset($table['overflow']) && $table['overflow'] === 'visible' && $table['level'] == 1) {
 
 			if ($tablewidth > $this->blk[$this->blklvl]['inner_width']) {
 
@@ -20213,7 +20229,7 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 				if (isset($cells[$i][$j]) && $cells[$i][$j]) {
 					$c = &$cells[$i][$j];
 
-					if ($this->simpleTables) {
+					if ($this->simpleTables && isset($table['simple'])) {
 						if ($table['borders_separate']) { // NB twice border width
 							$extraWLR = ($table['simple']['border_details']['L']['w'] + $table['simple']['border_details']['R']['w']) + ($c['padding']['L'] + $c['padding']['R']) + $table['border_spacing_H'];
 							$extrh = ($table['simple']['border_details']['T']['w'] + $table['simple']['border_details']['B']['w']) + ($c['padding']['T'] + $c['padding']['B']) + $table['border_spacing_V'];
@@ -20223,7 +20239,11 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 						}
 					} else {
 						if ($this->packTableData) {
-							list($bt, $br, $bb, $bl) = $this->_getBorderWidths($c['borderbin']);
+							if (isset($c['borderbin'])) {
+								list($bt, $br, $bb, $bl) = $this->_getBorderWidths($c['borderbin']);
+							} else {
+								$bt = $bb = $br = $bl = 0; // Default values if 'borderbin' is not set
+							}
 						} else {
 							$bt = $c['border_details']['T']['w'];
 							$bb = $c['border_details']['B']['w'];
@@ -20301,8 +20321,10 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 					} else {
 						if (!$this->simpleTables) {
 							$extra = $bb / 2;
-						} elseif ($this->simpleTables) {
+						} elseif (isset($table['simple']) && $this->simpleTables) {
 							$extra = $table['simple']['border_details']['B']['w'] / 2;
+						} else {
+							$extra = 0; // Default value if 'simple' key is not set
 						}
 					}
 					if (isset($table['is_thead'][$i]) && $table['is_thead'][$i]) {
@@ -21173,16 +21195,25 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 	// FIX BORDERS ********************************************
 	function _fixTableBorders(&$table)
 	{
-		if (!$table['borders_separate'] && $table['border_details']['L']['w']) {
+		if (isset($table['borders_separate']) && !$table['borders_separate'] && isset($table['border_details']['L']['w']) && $table['border_details']['L']['w']) {
 			$table['max_cell_border_width']['L'] = $table['border_details']['L']['w'];
 		}
-		if (!$table['borders_separate'] && $table['border_details']['R']['w']) {
+		if (isset($table['borders_separate']) && !$table['borders_separate'] && isset($table['border_details']['R']['w']) && $table['border_details']['R']['w']) {
 			$table['max_cell_border_width']['R'] = $table['border_details']['R']['w'];
 		}
-		if (!$table['borders_separate'] && $table['border_details']['T']['w']) {
+		if (
+			isset($table['borders_separate'], $table['border_details']['T']['w']) &&
+			!$table['borders_separate'] &&
+			$table['border_details']['T']['w']
+		) {
 			$table['max_cell_border_width']['T'] = $table['border_details']['T']['w'];
 		}
-		if (!$table['borders_separate'] && $table['border_details']['B']['w']) {
+		
+		if (
+			isset($table['borders_separate'], $table['border_details']['B']['w']) &&
+			!$table['borders_separate'] &&
+			$table['border_details']['B']['w']
+		) {
 			$table['max_cell_border_width']['B'] = $table['border_details']['B']['w'];
 		}
 		if ($this->simpleTables) {
@@ -21729,12 +21760,12 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 
 	function _tableWrite(&$table, $split = false, $startrow = 0, $startcol = 0, $splitpg = 0, $rety = 0)
 	{
-		$level = $table['level'];
-		$levelid = $table['levelid'];
+		$level = $table['level'] ?? 0;
+		$levelid = $table['levelid'] ?? 0;
 
 		$cells = &$table['cells'];
-		$numcols = $table['nc'];
-		$numrows = $table['nr'];
+		$numcols = $table['nc'] ?? 0;
+		$numrows = $table['nr'] ?? 0;
 		$maxbwtop = 0;
 		if ($this->ColActive && $level == 1) {
 			$this->breakpoints[$this->CurrCol][] = $this->y;
@@ -21742,7 +21773,7 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 
 		if (!$split || ($startrow == 0 && $splitpg == 0) || $startrow > 0) {
 			// TABLE TOP MARGIN
-			if ($table['margin']['T']) {
+			if ($table['margin']['T'] ?? false) {
 				if (!$this->table_rotate && $level == 1) {
 					$this->DivLn($table['margin']['T'], $this->blklvl, true, 1);  // collapsible
 				} else {
@@ -21750,14 +21781,14 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 				}
 			}
 			// Advance down page by half width of top border
-			if ($table['borders_separate']) {
+			if ($table['borders_separate'] ?? false) {
 				if ($startrow > 0 && (!isset($table['is_thead']) || count($table['is_thead']) == 0)) {
 					$adv = $table['border_spacing_V'] / 2;
 				} else {
-					$adv = $table['padding']['T'] + $table['border_details']['T']['w'] + $table['border_spacing_V'] / 2;
+					$adv = ($table['padding']['T'] ?? 0) + ($table['border_details']['T']['w'] ?? 0) + ($table['border_spacing_V'] ?? 0) / 2;
 				}
 			} else {
-				$adv = $table['max_cell_border_width']['T'] / 2;
+				$adv = ($table['max_cell_border_width']['T'] ?? 0) / 2;
 			}
 			if (!$this->table_rotate && $level == 1) {
 				$this->DivLn($adv);
@@ -21818,12 +21849,11 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 		} else {
 			$this->tableClipPath = '';
 		}
-
-
-		if ($table['borders_separate']) {
+		$bordersSeparate = $table['borders_separate'] ?? false;
+		if ($bordersSeparate) {
 			$indent = $table['margin']['L'] + $table['border_details']['L']['w'] + $table['padding']['L'] + $table['border_spacing_H'] / 2;
 		} else {
-			$indent = $table['margin']['L'] + $table['max_cell_border_width']['L'] / 2;
+			$indent = $table['margin']['L'] + ($table['max_cell_border_width']['L'] ?? 0) / 2;
 		}
 		$x0 += $indent;
 
@@ -22472,7 +22502,7 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 							$bord = $cell['border'];
 							$bord_det = $cell['border_details'];
 						}
-					} elseif ($this->simpleTables) {
+					} elseif ($this->simpleTables && isset($table['simple'])) {
 						$bord = $table['simple']['border'];
 						$bord_det = $table['simple']['border_details'];
 					}
@@ -22726,7 +22756,6 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 							}
 						}
 
-
 						if ($cell['R']) {
 							$cellPtSize = $cell['textbuffer'][0][11] / $this->shrin_k;
 							if (!$cellPtSize) {
@@ -22815,13 +22844,13 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 								}
 							} elseif ($this->simpleTables) {
 								if ($table['borders_separate']) { // NB twice border width
-									$xadj = $table['simple']['border_details']['L']['w'] + $cell['padding']['L'] + ($table['border_spacing_H'] / 2);
-									$wadj = $table['simple']['border_details']['L']['w'] + $table['simple']['border_details']['R']['w'] + $cell['padding']['L'] + $cell['padding']['R'] + $table['border_spacing_H'];
-									$yadj = $table['simple']['border_details']['T']['w'] + $cell['padding']['T'] + ($table['border_spacing_H'] / 2);
+									$xadj = (isset($table['simple']['border_details']['L']['w']) ? $table['simple']['border_details']['L']['w'] : 0) + $cell['padding']['L'] + ($table['border_spacing_H'] / 2);
+									$wadj = (isset($table['simple']['border_details']['L']['w']) ? $table['simple']['border_details']['L']['w'] : 0) + (isset($table['simple']['border_details']['R']['w']) ? $table['simple']['border_details']['R']['w'] : 0) + $cell['padding']['L'] + $cell['padding']['R'] + $table['border_spacing_H'];
+									$yadj = (isset($table['simple']['border_details']['T']['w']) ? $table['simple']['border_details']['T']['w'] : 0) + $cell['padding']['T'] + ($table['border_spacing_H'] / 2);
 								} else {
-									$xadj = $table['simple']['border_details']['L']['w'] / 2 + $cell['padding']['L'];
-									$wadj = ($table['simple']['border_details']['L']['w'] + $table['simple']['border_details']['R']['w']) / 2 + $cell['padding']['L'] + $cell['padding']['R'];
-									$yadj = $table['simple']['border_details']['T']['w'] / 2 + $cell['padding']['T'];
+									$xadj = (isset($table['simple']['border_details']['L']['w']) ? $table['simple']['border_details']['L']['w'] : 0) / 2 + $cell['padding']['L'];
+									$wadj = ((isset($table['simple']['border_details']['L']['w']) ? $table['simple']['border_details']['L']['w'] : 0) + (isset($table['simple']['border_details']['R']['w']) ? $table['simple']['border_details']['R']['w'] : 0)) / 2 + $cell['padding']['L'] + $cell['padding']['R'];
+									$yadj = (isset($table['simple']['border_details']['T']['w']) ? $table['simple']['border_details']['T']['w'] : 0) / 2 + $cell['padding']['T'];
 								}
 							}
 							$this->decimal_offset = 0;
@@ -22932,7 +22961,7 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 					/* -- END BACKGROUNDS -- */
 
 					// TABLE BORDER - if separate
-					if (($table['borders_separate'] || ($this->simpleTables && !$table['simple']['border'])) && $table['border']) {
+					if (($table['borders_separate'] || ($this->simpleTables && isset($table['simple']) && !$table['simple']['border'])) && $table['border']) {
 						$halfspaceL = $table['padding']['L'] + ($table['border_spacing_H'] / 2);
 						$halfspaceR = $table['padding']['R'] + ($table['border_spacing_H'] / 2);
 						$halfspaceT = $table['padding']['T'] + ($table['border_spacing_V'] / 2);
@@ -23008,24 +23037,24 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 		$this->tableClipPath = '';
 
 		// Advance down page by half width of bottom border
-		if ($table['borders_separate']) {
+		if (!empty($table['borders_separate'])) {
 			$this->y += $table['padding']['B'] + $table['border_details']['B']['w'] + $table['border_spacing_V'] / 2;
 		} else {
-			$this->y += $table['max_cell_border_width']['B'] / 2;
+			$this->y += ($table['max_cell_border_width']['B'] ?? 0) / 2;
 		}
 
-		if ($table['borders_separate'] && $level == 1) {
+		if (!empty($table['borders_separate']) && $level == 1) {
 			$this->tbrot_h += $table['margin']['B'] + $table['padding']['B'] + $table['border_details']['B']['w'] + $table['border_spacing_V'] / 2;
 		} elseif ($level == 1) {
-			$this->tbrot_h += $table['margin']['B'] + $table['max_cell_border_width']['B'] / 2;
+			$this->tbrot_h += $table['margin']['B'] + ($table['max_cell_border_width']['B'] ?? 0) / 2;
 		}
 
 		$bx = $x0;
 		$by = $y0;
-		if ($table['borders_separate']) {
+		if (!empty($table['borders_separate'])) {
 			$bx -= ($table['padding']['L'] + $table['border_details']['L']['w'] + $table['border_spacing_H'] / 2);
 			if ($tablestartpageno != $this->page) { // IF broken across page
-				$by += $table['max_cell_border_width']['T'] / 2;
+				$by += ($table['max_cell_border_width']['T'] ?? 0) / 2;
 				if (empty($tableheader)) {
 					$by -= ($table['border_spacing_V'] / 2);
 				}
@@ -23035,12 +23064,12 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 				$by -= ($table['padding']['T'] + $table['border_details']['T']['w'] + $table['border_spacing_V'] / 2);
 			}
 		} elseif ($tablestartpageno != $this->page && !empty($tableheader)) {
-			$by += $maxbwtop / 2;
+			$by += ($maxbwtop ?? 0) / 2;
 		}
 		$by -= $tableheaderadj;
 		$bh = $this->y - $by;
-		if (!$table['borders_separate']) {
-			$bh -= $table['max_cell_border_width']['B'] / 2;
+		if (empty($table['borders_separate'])) {
+			$bh -= ($table['max_cell_border_width']['B'] ?? 0) / 2;
 		}
 
 		if ($split) {
@@ -23055,12 +23084,8 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 					break;
 				}
 			}
-			if ($startcol == 0) {
-				$firstSpread = true;
-			} else {
-				$firstSpread = false;
-			}
-			if ($table['borders_separate']) {
+			$firstSpread = ($startcol == 0);
+			if (!empty($table['borders_separate'])) {
 				$bw += $table['border_spacing_H'];
 				if ($firstSpread) {
 					$bw += $table['padding']['L'] + $table['border_details']['L']['w'];
@@ -23072,7 +23097,7 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 				}
 			}
 		} else {
-			$bw = $table['w'] - ($table['max_cell_border_width']['L'] / 2) - ($table['max_cell_border_width']['R'] / 2) - $table['margin']['L'] - $table['margin']['R'];
+			$bw = $table['w'] - (($table['max_cell_border_width']['L'] ?? 0) / 2) - (($table['max_cell_border_width']['R'] ?? 0) / 2) - $table['margin']['L'] - $table['margin']['R'];
 		}
 
 		if (!$this->ColActive) {
@@ -23137,7 +23162,7 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 
 
 		// TABLE BOTTOM MARGIN
-		if ($table['margin']['B']) {
+		if (isset($table['margin']['B'])) {
 			if (!$this->table_rotate && $level == 1) {
 				$this->DivLn($table['margin']['B'], $this->blklvl, true);  // collapsible
 			} else {

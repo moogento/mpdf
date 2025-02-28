@@ -28,12 +28,36 @@ class Td extends Tag
 			$this->mpdf->col++;
 		}
 
-		// Update number column
-		if ($this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['nc'] < $this->mpdf->col + 1) {
-			$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['nc'] = $this->mpdf->col + 1;
+		// Initialize cell array if not set
+		if (!isset($this->mpdf->cell[$this->mpdf->row])) {
+			$this->mpdf->cell[$this->mpdf->row] = [];
+		}
+		if (!isset($this->mpdf->cell[$this->mpdf->row][$this->mpdf->col])) {
+			$this->mpdf->cell[$this->mpdf->row][$this->mpdf->col] = [];
 		}
 
-		$table = &$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]];
+		// Update number column
+		if (isset($this->mpdf->tableLevel) && isset($this->mpdf->tbctr) && isset($this->mpdf->tbctr[$this->mpdf->tableLevel])) {
+			if (!isset($this->mpdf->table[$this->mpdf->tableLevel])) {
+				$this->mpdf->table[$this->mpdf->tableLevel] = [];
+			}
+			if (!isset($this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]])) {
+				$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]] = [];
+			}
+			if (!isset($this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['nc'])) {
+				$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['nc'] = 0;
+			}
+			
+			if ($this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['nc'] < $this->mpdf->col + 1) {
+				$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['nc'] = $this->mpdf->col + 1;
+			}
+		}
+
+		if (isset($this->mpdf->table[$this->mpdf->tableLevel]) && isset($this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]])) {
+			$table = &$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]];
+		} else {
+			$table = [];
+		}
 
 		$c = ['a' => false,
 			'R' => false,
@@ -90,13 +114,13 @@ class Td extends Tag
 		}
 
 
-		if ($table['va']) {
+		if (isset($table['va']) && $table['va']) {
 			$c['va'] = $table['va'];
 		}
-		if ($table['txta']) {
+		if (isset($table['txta']) && $table['txta']) {
 			$c['a'] = $table['txta'];
 		}
-		if ($this->mpdf->table_border_attr_set && $table['border_details']) {
+		if ($this->mpdf->table_border_attr_set && isset($table['border_details']) && $table['border_details']) {
 			if (!$this->mpdf->simpleTables) {
 				$c['border_details']['R'] = $table['border_details']['R'];
 				$c['border_details']['L'] = $table['border_details']['L'];
@@ -230,7 +254,7 @@ class Td extends Tag
 		}
 
 		// mPDF 6
-		$c['direction'] = $table['direction'];
+		$c['direction'] = isset($table['direction']) ? $table['direction'] : '';
 		if (isset($attr['DIR']) && $attr['DIR'] != '') {
 			$c['direction'] = strtolower($attr['DIR']);
 		}
@@ -246,17 +270,17 @@ class Td extends Tag
 			}
 		}
 
-		$c['cellLineHeight'] = $table['cellLineHeight'];
+		$c['cellLineHeight'] = isset($table['cellLineHeight']) ? $table['cellLineHeight'] : '';
 		if (isset($properties['LINE-HEIGHT'])) {
 			$c['cellLineHeight'] = $this->mpdf->fixLineheight($properties['LINE-HEIGHT']);
 		}
 
-		$c['cellLineStackingStrategy'] = $table['cellLineStackingStrategy'];
+		$c['cellLineStackingStrategy'] = isset($table['cellLineStackingStrategy']) ? $table['cellLineStackingStrategy'] : '';
 		if (isset($properties['LINE-STACKING-STRATEGY'])) {
 			$c['cellLineStackingStrategy'] = strtolower($properties['LINE-STACKING-STRATEGY']);
 		}
 
-		$c['cellLineStackingShift'] = $table['cellLineStackingShift'];
+		$c['cellLineStackingShift'] = isset($table['cellLineStackingShift']) ? $table['cellLineStackingShift'] : '';
 		if (isset($properties['LINE-STACKING-SHIFT'])) {
 			$c['cellLineStackingShift'] = strtolower($properties['LINE-STACKING-SHIFT']);
 		}
@@ -322,13 +346,16 @@ class Td extends Tag
 			}
 		}
 
-		if ($this->mpdf->simpleTables && $this->mpdf->row == 0 && $this->mpdf->col == 0 && !$table['borders_separate'] && $table['simple']['border']) {
+		if ($this->mpdf->simpleTables && $this->mpdf->row == 0 && $this->mpdf->col == 0 && 
+		    isset($table['borders_separate']) && !$table['borders_separate'] && 
+		    isset($table['simple']['border']) && $table['simple']['border']) {
 			$table['border_details'] = $table['simple']['border_details'];
 			$table['border'] = $table['simple']['border'];
 		}
 
 		// Border set on TR (if collapsed only)
-		if (!$table['borders_separate'] && !$this->mpdf->simpleTables && isset($table['trborder-left'][$this->mpdf->row])) {
+		if (isset($table['borders_separate']) && !$table['borders_separate'] && 
+		    !$this->mpdf->simpleTables && isset($table['trborder-left'][$this->mpdf->row])) {
 			if ($this->mpdf->col == 0) {
 				$left = $this->mpdf->border_details($table['trborder-left'][$this->mpdf->row]);
 				$c['border_details']['L'] = $left;
@@ -365,17 +392,17 @@ class Td extends Tag
 			$w = $attr['WIDTH'];
 		}
 		if ($w) {
-			if (strpos($w, '%') && !$this->mpdf->ignore_table_percents) {
+			if (strpos($w, '%') !== false && !$this->mpdf->ignore_table_percents) {
 				$c['wpercent'] = (float) $w;
 			} // makes 80% -> 80
-			elseif (!strpos($w, '%') && !$this->mpdf->ignore_table_widths) {
+			elseif (strpos($w, '%') === false && !$this->mpdf->ignore_table_widths) {
 				$c['w'] = $this->sizeConverter->convert($w, $this->mpdf->blk[$this->mpdf->blklvl]['inner_width'], $this->mpdf->FontSize, false);
 			}
 		}
 
-		if (isset($properties['HEIGHT']) && !strpos($properties['HEIGHT'], '%')) {
+		if (isset($properties['HEIGHT']) && strpos($properties['HEIGHT'], '%') === false) {
 			$c['h'] = $this->sizeConverter->convert($properties['HEIGHT'], $this->mpdf->blk[$this->mpdf->blklvl]['inner_width'], $this->mpdf->FontSize, false);
-		} elseif (isset($attr['HEIGHT']) && !strpos($attr['HEIGHT'], '%')) {
+		} elseif (isset($attr['HEIGHT']) && strpos($attr['HEIGHT'], '%') === false) {
 			$c['h'] = $this->sizeConverter->convert($attr['HEIGHT'], $this->mpdf->blk[$this->mpdf->blklvl]['inner_width'], $this->mpdf->FontSize, false);
 		}
 
@@ -400,12 +427,24 @@ class Td extends Tag
 		if (isset($attr['COLSPAN']) && $attr['COLSPAN'] > 1) {
 			$cs = $this->mpdf->cell[$this->mpdf->row][$this->mpdf->col]['colspan'] = $attr['COLSPAN'];
 		}
-		if ($this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['nc'] < $this->mpdf->col + $cs) {
+		if (isset($this->mpdf->tableLevel) && 
+		    isset($this->mpdf->tbctr) && 
+		    isset($this->mpdf->tbctr[$this->mpdf->tableLevel]) && 
+		    isset($this->mpdf->table) && 
+		    isset($this->mpdf->table[$this->mpdf->tableLevel]) && 
+		    isset($this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]) && 
+		    isset($this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['nc']) && 
+		    isset($this->mpdf->col) && isset($cs) && 
+		    $this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['nc'] < $this->mpdf->col + $cs) {
 			$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['nc'] = $this->mpdf->col + $cs;
-		} // following code moved outside if...
+		}
 		for ($l = $this->mpdf->col; $l < $this->mpdf->col + $cs; $l++) {
 			if ($l - $this->mpdf->col) {
-				$this->mpdf->cell[$this->mpdf->row][$l] = 0;
+				if (!isset($this->mpdf->cell[$this->mpdf->row][$l])) {
+					$this->mpdf->cell[$this->mpdf->row][$l] = [];
+				} else {
+					$this->mpdf->cell[$this->mpdf->row][$l] = 0;
+				}
 			}
 		}
 		if (isset($attr['ROWSPAN']) && $attr['ROWSPAN'] > 1) {
@@ -414,7 +453,14 @@ class Td extends Tag
 		for ($k = $this->mpdf->row; $k < $this->mpdf->row + $rs; $k++) {
 			for ($l = $this->mpdf->col; $l < $this->mpdf->col + $cs; $l++) {
 				if ($k - $this->mpdf->row || $l - $this->mpdf->col) {
-					$this->mpdf->cell[$k][$l] = 0;
+					if (!isset($this->mpdf->cell[$k])) {
+						$this->mpdf->cell[$k] = [];
+					}
+					if (!isset($this->mpdf->cell[$k][$l])) {
+						$this->mpdf->cell[$k][$l] = [];
+					} else {
+						$this->mpdf->cell[$k][$l] = 0;
+					}
 				}
 			}
 		}
@@ -446,20 +492,40 @@ class Td extends Tag
 			if (isset($this->mpdf->cell[$this->mpdf->row][$this->mpdf->col]['textbuffer'])) {
 				$ntb = count($this->mpdf->cell[$this->mpdf->row][$this->mpdf->col]['textbuffer']);
 			}
-			if ($ntb > 1 && $this->mpdf->cell[$this->mpdf->row][$this->mpdf->col]['textbuffer'][$ntb - 1][0] === "\n") {
+			if ($ntb > 1 && isset($this->mpdf->cell[$this->mpdf->row][$this->mpdf->col]['textbuffer'][$ntb - 1]) && 
+			    is_array($this->mpdf->cell[$this->mpdf->row][$this->mpdf->col]['textbuffer'][$ntb - 1]) && 
+			    isset($this->mpdf->cell[$this->mpdf->row][$this->mpdf->col]['textbuffer'][$ntb - 1][0]) && 
+			    $this->mpdf->cell[$this->mpdf->row][$this->mpdf->col]['textbuffer'][$ntb - 1][0] === "\n") {
 				unset($this->mpdf->cell[$this->mpdf->row][$this->mpdf->col]['textbuffer'][$ntb - 1]);
 			}
 
 			if ($this->mpdf->tablethead) {
+				if (!isset($this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['is_thead'])) {
+					$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['is_thead'] = [];
+				}
 				$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['is_thead'][$this->mpdf->row] = true;
+				
 				if ($this->mpdf->tableLevel == 1) {
+					if (!isset($this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['headernrows'])) {
+						$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['headernrows'] = 0;
+					}
 					$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['headernrows']
 						= max($this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['headernrows'], $this->mpdf->row + 1);
 				}
 			}
 			if ($this->mpdf->tabletfoot) {
+				if (!isset($this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['is_tfoot'])) {
+					$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['is_tfoot'] = [];
+				}
 				$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['is_tfoot'][$this->mpdf->row] = true;
+				
 				if ($this->mpdf->tableLevel == 1) {
+					if (!isset($this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['footernrows'])) {
+						$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['footernrows'] = 0;
+					}
+					if (!isset($this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['headernrows'])) {
+						$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['headernrows'] = 0;
+					}
 					$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['footernrows']
 						= max(
 							$this->mpdf->table[$this->mpdf->tableLevel][$this->mpdf->tbctr[$this->mpdf->tableLevel]]['footernrows'],

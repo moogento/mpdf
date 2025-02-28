@@ -413,6 +413,9 @@ class Img extends Tag
 			// Output it to buffers
 			if ($this->mpdf->tableLevel) {
 				$this->mpdf->_saveCellTextBuffer($e, $this->mpdf->HREF);
+				if (!isset($this->mpdf->cell[$this->mpdf->row][$this->mpdf->col]['s'])) {
+					$this->mpdf->cell[$this->mpdf->row][$this->mpdf->col]['s'] = 0;
+				}
 				$this->mpdf->cell[$this->mpdf->row][$this->mpdf->col]['s'] += $objattr['width'];
 			} else {
 				/* -- END TABLES -- */
