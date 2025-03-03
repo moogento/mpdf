@@ -3855,7 +3855,7 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 
 		$fontCacheFilename = $fontkey . '.mtx.json';
 		if ($this->fontCache->jsonHas($fontCacheFilename)) {
-			$font = $this->fontCache->jsonLoad($fontCacheFilename);
+			$font = $this->fontCache->jsonLoad($fontCacheFilename) ? $this->fontCache->jsonLoad($fontCacheFilename) : $font;
 		}
 
 		$ttffile = $this->fontFileFinder->findFontFile($this->fontdata[$family][$stylekey]);
@@ -3898,7 +3898,7 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 				$fontUseOTL
 			);
 
-			$font = $this->fontCache->jsonLoad($fontCacheFilename);
+			$font = $this->fontCache->jsonLoad($fontCacheFilename) ? $this->fontCache->jsonLoad($fontCacheFilename) : $font;
 			$cw = $this->fontCache->load($fontkey . '.cw.dat');
 			$glyphIDtoUni = $this->fontCache->load($fontkey . '.gid.dat');
 		} else {
