@@ -5618,7 +5618,7 @@ class Otl
 		}
 
 		for ($i = ($numchars - 1); $i > 0; $i--) {
-			if ($bidiData[$i]['type'] == Ucdn::BIDI_CLASS_WS || (isset($bidiData[$i]['orig_type']) && $bidiData[$i]['orig_type'] == Ucdn::BIDI_CLASS_WS)) {
+			if ((isset($bidiData[$i]['type']) && $bidiData[$i]['type'] == Ucdn::BIDI_CLASS_WS) || (isset($bidiData[$i]['orig_type']) && $bidiData[$i]['orig_type'] == Ucdn::BIDI_CLASS_WS)) {
 				$bidiData[$i]['level'] = $pel;
 			} else {
 				break;
@@ -5634,7 +5634,7 @@ class Otl
 				if ($bidiData[$i]['level'] >= $j) {
 					$onlevel = true;
 					// L4. A character is depicted by a mirrored glyph if and only if (a) the resolved directionality of that character is R, and (b) the Bidi_Mirrored property value of that character is true.
-					if (isset(Ucdn::$mirror_pairs[$bidiData[$i]['uni']]) && $bidiData[$i]['type'] == Ucdn::BIDI_CLASS_R) {
+					if (isset($bidiData[$i]['uni']) && isset(Ucdn::$mirror_pairs[$bidiData[$i]['uni']]) && isset($bidiData[$i]['type']) && $bidiData[$i]['type'] == Ucdn::BIDI_CLASS_R) {
 						$bidiData[$i]['uni'] = Ucdn::$mirror_pairs[$bidiData[$i]['uni']];
 					}
 
