@@ -4166,8 +4166,8 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 			// Select it
 			$this->FontFamily = $family;
 			$this->FontStyle = $style;
-			$this->FontSizePt = $size;
-			$this->FontSize = $size / Mpdf::SCALE;
+			$this->FontSizePt = (float)$size;
+			$this->FontSize = (float)$size / Mpdf::SCALE;
 			$this->CurrentFont = &$this->fonts[$fontkey];
 			if ($write) {
 				$fontout = (sprintf('BT /F%d %.3F Tf ET', $this->CurrentFont['i'], $this->FontSizePt));
@@ -4234,8 +4234,8 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 			// Select it
 			$this->FontFamily = $family;
 			$this->FontStyle = $style;
-			$this->FontSizePt = $size;
-			$this->FontSize = $size / Mpdf::SCALE;
+			$this->FontSizePt = (float)$size;
+			$this->FontSize = (float)$size / Mpdf::SCALE;
 			$this->CurrentFont = &$this->fonts[$fontkey];
 			if ($write) {
 				$fontout = (sprintf('BT /F%d %.3F Tf ET', $this->CurrentFont['i'], $this->FontSizePt));
@@ -4260,7 +4260,7 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 			return;
 		}
 		$this->FontSizePt = $size;
-		$this->FontSize = $size / Mpdf::SCALE;
+		$this->FontSize = (float)$size / Mpdf::SCALE;
 		$this->currentfontsize = $size;
 		if ($write) {
 			$fontout = (sprintf('BT /F%d %.3F Tf ET', $this->CurrentFont['i'], $this->FontSizePt));
@@ -4328,7 +4328,7 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 		$s = 'q ';
 		if ($this->falseBoldWeight && strpos($this->ReqFontStyle, "B") !== false && strpos($this->FontStyle, "B") === false) {
 			$s .= '2 Tr 1 J 1 j ';
-			$s .= sprintf('%.3F w ', ($this->FontSize / 130) * Mpdf::SCALE * $this->falseBoldWeight);
+			$s .= sprintf('%.3F w ', (float)($this->FontSize / 130) * Mpdf::SCALE * $this->falseBoldWeight);
 			$tc = strtoupper($this->TextColor); // change 0 0 0 rg to 0 0 0 RG
 			if ($this->FillColor != $tc) {
 				$s .= $tc . ' ';
@@ -25548,7 +25548,6 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 				$prevFontFamily = $this->FontFamily;
 				$prevFontStyle = $this->currentfontstyle;
 				$prevFontSizePt = $this->FontSizePt;
-				$this->SetFont($bsf, '', '', false);
 				$this->SetFont($prevFontFamily, $prevFontStyle, $prevFontSizePt, false);
 			}
 
@@ -25819,7 +25818,6 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
 				$prevFontFamily = $this->FontFamily;
 				$prevFontStyle = $this->currentfontstyle;
 				$prevFontSizePt = $this->FontSizePt;
-				$this->SetFont($bsf, '', '', false);
 				$this->SetFont($prevFontFamily, $prevFontStyle, $prevFontSizePt, false);
 				if ($this->fontCache->has($font . '.cw.dat')) {
 					$cw = $this->fontCache->load($font . '.cw.dat');
